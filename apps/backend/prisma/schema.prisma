@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Application {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  countryCode     String   @map("country_code") @db.VarChar(2)
+  fullName        String   @map("full_name") @db.VarChar(255)
+  documentId      String   @map("document_id") @db.VarChar(255)
+  requestedAmount Decimal  @map("requested_amount") @db.Decimal(15, 2)
+  monthlyIncome   Decimal  @map("monthly_income") @db.Decimal(15, 2)
+  status          String   @default("pending") @db.VarChar(50)
+  bankData        Json?    @map("bank_data")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  events ApplicationEvent[]
+
+  @@unique([documentId, countryCode])
+  @@index([countryCode, status])
+  @@index([createdAt(sort: Desc)])
+  @@map("applications")
+}
+
+model ApplicationEvent {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  applicationId String   @map("application_id") @db.Uuid
+  eventType     String   @map("event_type") @db.VarChar(100)
+  eventData     Json?    @map("event_data")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  application Application @relation(fields: [applicationId], references: [id])
+
+  @@index([applicationId])
+  @@map("application_events")
+}
+
+model Job {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type        String    @db.VarChar(100)
+  payload     Json
+  status      String    @default("pending") @db.VarChar(50)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3) @map("max_attempts")
+  error       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  processedAt DateTime? @map("processed_at")
+
+  @@index([status])
+  @@map("jobs")
+}
