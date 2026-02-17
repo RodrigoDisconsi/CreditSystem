@@ -16,8 +16,8 @@ export default function NewApplicationPage() {
     try {
       const res = await createApplication(data);
       navigate(`/applications/${res.data.id}`);
-    } catch (err: any) {
-      setError(err.error?.message || 'Failed to create application');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create application');
     } finally {
       setIsLoading(false);
     }

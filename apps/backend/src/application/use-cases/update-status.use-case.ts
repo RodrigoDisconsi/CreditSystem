@@ -5,7 +5,7 @@ import type { IQueueService } from '../../domain/interfaces/queue-service.interf
 import type { IWebSocketEmitter } from '../../domain/interfaces/websocket-emitter.interface.js';
 import type { IEncryptionService } from '../../domain/interfaces/encryption.interface.js';
 import { NotFoundError, ValidationError } from '../../shared/errors/index.js';
-import { QUEUE_NAMES } from '../../infrastructure/queue/queue-names.js';
+import { QUEUE_NAMES } from '../../domain/constants/queue-names.js';
 import type { UpdateStatusDto } from '../dto/update-status.dto.js';
 import type { ApplicationResponseDto } from '../dto/application-response.dto.js';
 import { toApplicationResponse } from '../dto/application-response.dto.js';
@@ -36,12 +36,8 @@ export class UpdateStatusUseCase {
       );
     }
 
-    // 3. Update via repository (optimistic concurrency via updatedAt)
-    const updated = await this.applicationRepository.updateStatus(
-      id,
-      dto.status,
-      application.updatedAt,
-    );
+    // 3. Update via repository
+    const updated = await this.applicationRepository.updateStatus(id, dto.status);
 
     // 4. Invalidate caches (single + list)
     await Promise.all([

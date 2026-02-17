@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { randomUUID } from 'crypto';
 import type { JwtService, JwtPayload } from '../../infrastructure/security/jwt.service.js';
 import { UnauthorizedError } from '../../shared/errors/index.js';
 
@@ -10,10 +9,11 @@ interface MvpUser {
   role: string;
 }
 
+// Stable UUIDs so tokens survive server restarts
 const MVP_USERS: MvpUser[] = [
-  { userId: randomUUID(), email: 'admin@credit.com', password: 'admin123', role: 'admin' },
-  { userId: randomUUID(), email: 'analyst@credit.com', password: 'analyst123', role: 'analyst' },
-  { userId: randomUUID(), email: 'viewer@credit.com', password: 'viewer123', role: 'viewer' },
+  { userId: 'c647d0d1-89c5-4e2a-9229-5c8ebe3ebeff', email: 'admin@credit.com', password: 'admin123', role: 'admin' },
+  { userId: '2dd7061f-c2a0-43b7-8344-e7cf0b0a4af6', email: 'analyst@credit.com', password: 'analyst123', role: 'analyst' },
+  { userId: 'f4a5e1b2-3c6d-4e8f-9a0b-1c2d3e4f5a6b', email: 'viewer@credit.com', password: 'viewer123', role: 'viewer' },
 ];
 
 export function createAuthRoutes(jwtService: JwtService): Router {
@@ -69,7 +69,7 @@ export function createAuthRoutes(jwtService: JwtService): Router {
 
       let payload: JwtPayload;
       try {
-        payload = jwtService.verify(refreshToken);
+        payload = jwtService.verifyRefresh(refreshToken);
       } catch {
         throw new UnauthorizedError('Invalid or expired refresh token');
       }

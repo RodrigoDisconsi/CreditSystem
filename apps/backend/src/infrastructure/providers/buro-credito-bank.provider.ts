@@ -1,20 +1,7 @@
 import type { MexicoBankData } from '@credit-system/shared';
 import type { IBankProvider } from '../../domain/interfaces/bank-provider.interface.js';
 import { logger } from '../../shared/logger.js';
-
-function simpleHash(input: string): number {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = ((hash << 5) - hash + char) | 0;
-  }
-  return Math.abs(hash);
-}
-
-function randomDelay(): Promise<void> {
-  const ms = 2000 + Math.random() * 2000;
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { simpleHash, randomDelay } from './provider-utils.js';
 
 export class BuroCreditoBankProvider implements IBankProvider {
   async evaluate(

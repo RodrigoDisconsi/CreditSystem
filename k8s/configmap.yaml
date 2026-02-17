@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: credit-system-config
+  namespace: credit-system
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  CORS_ORIGIN: "https://credit.example.com"
+  LOG_LEVEL: "info"
+  VITE_API_URL: "https://api.credit.example.com"

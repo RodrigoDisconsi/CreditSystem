@@ -1,4 +1,5 @@
 import type { Job } from 'bullmq';
+import { logger } from '../shared/logger.js';
 
 export class NotificationWorker {
   async process(job: Job): Promise<void> {
@@ -9,8 +10,6 @@ export class NotificationWorker {
     };
 
     // Mock implementation - logs notification
-    console.log(`[NOTIFICATION] Application ${applicationId} -> ${status}`);
-    console.log(`  Type: ${type || 'status_update'}`);
-    console.log(`  Would send email/SMS notification here`);
+    logger.info(`[NOTIFICATION] Application ${applicationId} -> ${status} (type: ${type || 'status_update'})`);
   }
 }

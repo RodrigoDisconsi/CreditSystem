@@ -8,7 +8,7 @@ export const STATUS: Record<ApplicationStatus, ApplicationStatus> = {
 } as const;
 
 export const VALID_STATUS_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus[]> = {
-  pending: ['under_review', 'rejected'],
+  pending: ['under_review', 'approved', 'rejected'],
   under_review: ['approved', 'rejected'],
   approved: [],
   rejected: [],

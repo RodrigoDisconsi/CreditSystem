@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import MainLayout from './components/layout/MainLayout';
 import LoadingSpinner from './components/ui/LoadingSpinner';

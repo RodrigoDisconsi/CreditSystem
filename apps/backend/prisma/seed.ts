@@ -1,6 +1,23 @@
 import { PrismaClient } from '@prisma/client';
+import { randomBytes, createCipheriv, type CipherGCM } from 'crypto';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+dotenv.config();
 
 const prisma = new PrismaClient();
+
+function encrypt(plaintext: string): string {
+  const key = Buffer.from(process.env.ENCRYPTION_KEY!, 'hex');
+  const iv = randomBytes(12);
+  const cipher: CipherGCM = createCipheriv('aes-256-gcm' as const, key, iv, {
+    authTagLength: 16,
+  });
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
+}
 
 async function main(): Promise<void> {
   console.log('Seeding database...');
@@ -15,7 +32,7 @@ async function main(): Promise<void> {
     data: {
       countryCode: 'BR',
       fullName: 'Carlos Silva',
-      documentId: '12345678901',
+      documentId: encrypt('12345678901'),
       requestedAmount: 50000.00,
       monthlyIncome: 12000.00,
       status: 'pending',
@@ -26,7 +43,7 @@ async function main(): Promise<void> {
     data: {
       countryCode: 'BR',
       fullName: 'Maria Oliveira',
-      documentId: '98765432100',
+      documentId: encrypt('98765432100'),
       requestedAmount: 25000.00,
       monthlyIncome: 8000.00,
       status: 'under_review',
@@ -45,7 +62,7 @@ async function main(): Promise<void> {
     data: {
       countryCode: 'BR',
       fullName: 'Ana Santos',
-      documentId: '11122233344',
+      documentId: encrypt('11122233344'),
       requestedAmount: 15000.00,
       monthlyIncome: 6000.00,
       status: 'approved',
@@ -65,7 +82,7 @@ async function main(): Promise<void> {
     data: {
       countryCode: 'MX',
       fullName: 'Juan Garcia',
-      documentId: 'GAGJ800101HDFRRL09',
+      documentId: encrypt('GAGJ800101HDFRRL09'),
       requestedAmount: 100000.00,
       monthlyIncome: 30000.00,
       status: 'pending',
@@ -76,7 +93,7 @@ async function main(): Promise<void> {
     data: {
       countryCode: 'MX',
       fullName: 'Sofia Lopez',
-      documentId: 'LOPS900515MDFRRL01',
+      documentId: encrypt('LOPS900515MDFRRL01'),
       requestedAmount: 200000.00,
       monthlyIncome: 15000.00,
       status: 'rejected',
@@ -95,7 +112,7 @@ async function main(): Promise<void> {
     data: {
       countryCode: 'MX',
       fullName: 'Roberto Martinez',
-      documentId: 'MARR850220HDFRRT05',
+      documentId: encrypt('MARR850220HDFRRT05'),
       requestedAmount: 75000.00,
       monthlyIncome: 45000.00,
       status: 'approved',

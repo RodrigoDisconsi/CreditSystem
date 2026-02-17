@@ -6,6 +6,7 @@ import { requestIdMiddleware } from './middlewares/request-id.middleware.js';
 import { requestLoggerMiddleware } from './middlewares/request-logger.middleware.js';
 import { errorHandler } from './middlewares/error-handler.middleware.js';
 import { healthRoutes } from './routes/health.routes.js';
+import { env } from '../config/env.js';
 
 export function createApp(): Express {
   const app = express();
@@ -13,7 +14,7 @@ export function createApp(): Express {
   // Security
   app.use(helmet());
   app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: env.CORS_ORIGIN,
     credentials: true,
   }));
 

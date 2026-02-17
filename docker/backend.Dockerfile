@@ -31,6 +31,9 @@ COPY packages/shared/ ./packages/shared/
 COPY apps/backend/ ./apps/backend/
 COPY tsconfig.base.json ./
 
+# Generate Prisma client
+RUN pnpm --filter @credit-system/backend exec prisma generate
+
 EXPOSE 3000
 
 CMD ["pnpm", "--filter", "@credit-system/backend", "dev"]
@@ -58,6 +61,10 @@ COPY packages/shared/package.json ./packages/shared/
 
 # Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod
+
+# Copy Prisma schema and generate client
+COPY apps/backend/prisma ./apps/backend/prisma
+RUN pnpm --filter @credit-system/backend exec prisma generate
 
 # Copy built artifacts
 COPY --from=build /app/apps/backend/dist ./apps/backend/dist

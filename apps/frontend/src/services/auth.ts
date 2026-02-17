@@ -14,5 +14,6 @@ export async function loginApi(email: string, password: string): Promise<LoginRe
     const err: { error?: { message?: string } } = await res.json();
     throw new Error(err.error?.message || 'Login failed');
   }
-  return res.json() as Promise<LoginResponse>;
+  const json = await res.json() as { success: boolean; data: LoginResponse };
+  return json.data;
 }

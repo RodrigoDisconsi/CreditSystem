@@ -3,9 +3,12 @@ import type { IApplicationRepository } from '../domain/interfaces/application-re
 import type { IWebSocketEmitter } from '../domain/interfaces/websocket-emitter.interface.js';
 import type { IQueueService } from '../domain/interfaces/queue-service.interface.js';
 import type { IEncryptionService } from '../domain/interfaces/encryption.interface.js';
+import type { ICacheService } from '../domain/interfaces/cache-service.interface.js';
 import { CountryRuleFactory } from '../domain/factories/country-rule.factory.js';
 import { BankProviderFactory } from '../domain/factories/bank-provider.factory.js';
 import type { CountryCode } from '@credit-system/shared';
+import { determineStatusFromRisk } from '../domain/rules/risk-status.js';
+import { logger } from '../shared/logger.js';
 
 export class RiskEvaluationWorker {
   constructor(
@@ -15,6 +18,7 @@ export class RiskEvaluationWorker {
     private readonly webSocketEmitter: IWebSocketEmitter,
     private readonly queueService: IQueueService,
     private readonly encryptionService: IEncryptionService,
+    private readonly cacheService: ICacheService,
   ) {}
 
   async process(job: Job): Promise<void> {
@@ -26,31 +30,34 @@ export class RiskEvaluationWorker {
       throw new Error(`Application ${applicationId} not found`);
     }
 
-    // 2. Get bank data from provider
+    // 2. Get bank data from provider (documentId already decrypted by repository)
     const provider = this.bankProviderFactory.getProvider(countryCode);
-    const decryptedDocId = this.encryptionService.decrypt(application.documentId);
-    const bankData = await provider.evaluate(applicationId, countryCode, decryptedDocId);
+    const bankData = await provider.evaluate(applicationId, countryCode, application.documentId);
 
     // 3. Run country rules
     const countryRule = this.countryRuleFactory.getRule(countryCode);
     const result = countryRule.evaluateRisk(application, bankData);
 
     // 4. Determine status
-    let newStatus: string;
-    if (result.approved) {
-      newStatus = 'approved';
-    } else if (result.score >= 50 && !result.approved) {
-      // Borderline - needs manual review (for MX high amounts)
-      newStatus = 'under_review';
-    } else {
-      newStatus = 'rejected';
-    }
+    const newStatus = determineStatusFromRisk(result);
 
     // 5. Update application with bank data
-    await this.applicationRepository.updateBankData(applicationId, bankData as unknown as Record<string, unknown>);
+    const updatedApp = await this.applicationRepository.updateBankData(applicationId, bankData as unknown as Record<string, unknown>);
 
-    // 6. Update status
-    await this.applicationRepository.updateStatus(applicationId, newStatus, application.updatedAt);
+    // 6. Validate domain transition before persisting
+    if (!updatedApp.canTransitionTo(newStatus as import('@credit-system/shared').ApplicationStatus)) {
+      logger.info(`Skipping status update for ${applicationId}: invalid transition from '${updatedApp.status}' to '${newStatus}'`);
+      return;
+    }
+
+    // 7. Update status (use updatedAt from step 5, not the original fetch)
+    await this.applicationRepository.updateStatus(applicationId, newStatus);
+
+    // 6.1 Invalidate caches so API returns fresh data
+    await Promise.all([
+      this.cacheService.del(`application:${applicationId}`),
+      this.cacheService.invalidate('applications:*'),
+    ]);
 
     // 7. Emit WebSocket
     this.webSocketEmitter.emitToApplication(applicationId, 'application:risk-evaluated', {
@@ -76,6 +83,6 @@ export class RiskEvaluationWorker {
       },
     });
 
-    console.log(`Risk evaluation completed for ${applicationId}: ${newStatus} (score: ${result.score})`);
+    logger.info(`Risk evaluation completed for ${applicationId}: ${newStatus} (score: ${result.score})`);
   }
 }

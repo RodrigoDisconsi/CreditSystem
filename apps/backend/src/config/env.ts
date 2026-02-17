@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+// Load .env from monorepo root (2 levels up from apps/backend/)
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
+dotenv.config(); // Also check local .env as fallback
 
 const envSchema = z.object({
   DATABASE_URL: z.string().url(),

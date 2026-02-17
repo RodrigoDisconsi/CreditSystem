@@ -1,5 +1,2 @@
-export const QUEUE_NAMES = {
-  RISK_EVALUATION: 'risk-evaluation',
-  AUDIT: 'audit',
-  NOTIFICATION: 'notification',
-} as const;
+// Re-export from domain (canonical location)
+export { QUEUE_NAMES } from '../../domain/constants/queue-names.js';

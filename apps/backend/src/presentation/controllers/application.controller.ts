@@ -1,27 +1,31 @@
 import { Request, Response, NextFunction } from 'express';
+import type { CreateApplicationDto } from '../../application/dto/create-application.dto.js';
+import type { UpdateStatusDto } from '../../application/dto/update-status.dto.js';
+import type { ApplicationResponseDto } from '../../application/dto/application-response.dto.js';
+import type { ApplicationFilters } from '@credit-system/shared';
 
-export interface CreateApplicationUseCase {
-  execute(data: unknown): Promise<{ id: string }>;
+export interface ICreateApplicationUseCase {
+  execute(data: CreateApplicationDto): Promise<ApplicationResponseDto>;
 }
 
-export interface GetApplicationUseCase {
-  execute(id: string): Promise<unknown>;
+export interface IGetApplicationUseCase {
+  execute(id: string): Promise<ApplicationResponseDto>;
 }
 
-export interface ListApplicationsUseCase {
-  execute(filters: unknown): Promise<unknown>;
+export interface IListApplicationsUseCase {
+  execute(filters: ApplicationFilters): Promise<{ success: boolean; data: ApplicationResponseDto[]; pagination: unknown }>;
 }
 
-export interface UpdateStatusUseCase {
-  execute(id: string, data: unknown): Promise<unknown>;
+export interface IUpdateStatusUseCase {
+  execute(id: string, data: UpdateStatusDto): Promise<ApplicationResponseDto>;
 }
 
 export class ApplicationController {
   constructor(
-    private readonly createApplicationUseCase: CreateApplicationUseCase,
-    private readonly getApplicationUseCase: GetApplicationUseCase,
-    private readonly listApplicationsUseCase: ListApplicationsUseCase,
-    private readonly updateStatusUseCase: UpdateStatusUseCase,
+    private readonly createApplicationUseCase: ICreateApplicationUseCase,
+    private readonly getApplicationUseCase: IGetApplicationUseCase,
+    private readonly listApplicationsUseCase: IListApplicationsUseCase,
+    private readonly updateStatusUseCase: IUpdateStatusUseCase,
   ) {}
 
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -44,7 +48,7 @@ export class ApplicationController {
 
   list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const result = await this.listApplicationsUseCase.execute(req.query as any);
+      const result = await this.listApplicationsUseCase.execute(req.query as unknown as ApplicationFilters);
       res.json(result);
     } catch (error) {
       next(error);

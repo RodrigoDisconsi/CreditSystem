@@ -6,6 +6,10 @@ export interface JwtPayload {
   role: string;
 }
 
+interface InternalPayload extends JwtPayload {
+  type: 'access' | 'refresh';
+}
+
 export class JwtService {
   constructor(
     private readonly secret: string,
@@ -14,14 +18,28 @@ export class JwtService {
   ) {}
 
   sign(payload: JwtPayload): string {
-    return jwt.sign(payload, this.secret, { expiresIn: this.expiresIn as any });
+    const internal: InternalPayload = { ...payload, type: 'access' };
+    return jwt.sign(internal, this.secret, { expiresIn: this.expiresIn } as any);
   }
 
   signRefresh(payload: JwtPayload): string {
-    return jwt.sign(payload, this.secret, { expiresIn: this.refreshExpiresIn as any });
+    const internal: InternalPayload = { ...payload, type: 'refresh' };
+    return jwt.sign(internal, this.secret, { expiresIn: this.refreshExpiresIn } as any);
   }
 
   verify(token: string): JwtPayload {
-    return jwt.verify(token, this.secret) as JwtPayload;
+    const decoded = jwt.verify(token, this.secret) as InternalPayload;
+    if (decoded.type && decoded.type !== 'access') {
+      throw new Error('Invalid token type: expected access token');
+    }
+    return { userId: decoded.userId, email: decoded.email, role: decoded.role };
+  }
+
+  verifyRefresh(token: string): JwtPayload {
+    const decoded = jwt.verify(token, this.secret) as InternalPayload;
+    if (decoded.type && decoded.type !== 'refresh') {
+      throw new Error('Invalid token type: expected refresh token');
+    }
+    return { userId: decoded.userId, email: decoded.email, role: decoded.role };
   }
 }

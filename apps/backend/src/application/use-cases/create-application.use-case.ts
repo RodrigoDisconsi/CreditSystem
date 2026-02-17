@@ -7,7 +7,7 @@ import type { IWebSocketEmitter } from '../../domain/interfaces/websocket-emitte
 import { Application } from '../../domain/entities/application.entity.js';
 import { createCountryRule } from '../../domain/factories/country-rule.factory.js';
 import { ValidationError, ConflictError } from '../../shared/errors/index.js';
-import { QUEUE_NAMES } from '../../infrastructure/queue/queue-names.js';
+import { QUEUE_NAMES } from '../../domain/constants/queue-names.js';
 import type { CreateApplicationDto } from '../dto/create-application.dto.js';
 import type { ApplicationResponseDto } from '../dto/application-response.dto.js';
 import { toApplicationResponse } from '../dto/application-response.dto.js';
@@ -28,23 +28,20 @@ export class CreateApplicationUseCase {
       throw new ValidationError('Invalid document ID for country ' + dto.countryCode);
     }
 
-    // 2. Encrypt documentId
-    const encryptedDocId = this.encryptionService.encrypt(dto.documentId);
-
-    // 3. Check for duplicates
+    // 2. Check for duplicates (repository handles encryption)
     const exists = await this.applicationRepository.existsByDocumentAndCountry(
-      encryptedDocId,
+      dto.documentId,
       dto.countryCode,
     );
     if (exists) {
       throw new ConflictError('Application already exists for this document and country');
     }
 
-    // 4. Create domain entity
+    // 3. Create domain entity (repository handles encryption on persist)
     const application = Application.create({
       countryCode: dto.countryCode as CountryCode,
       fullName: dto.fullName,
-      documentId: encryptedDocId,
+      documentId: dto.documentId,
       requestedAmount: dto.requestedAmount,
       monthlyIncome: dto.monthlyIncome,
     });
@@ -65,13 +62,15 @@ export class CreateApplicationUseCase {
       payload: { countryCode: saved.countryCode, fullName: saved.fullName },
     });
 
-    // 8. Emit WebSocket
-    this.webSocketEmitter.emitToCountry(saved.countryCode, 'application:created', saved);
+    // 8. Build response DTO (plain object with masked doc + proper field names)
+    const responseDto = toApplicationResponse(saved, this.encryptionService);
 
-    // 9. Invalidate list caches
+    // 9. Emit WebSocket (must use DTO, not domain entity — entity has private _status fields)
+    this.webSocketEmitter.emitToCountry(saved.countryCode, 'application:created', responseDto);
+
+    // 10. Invalidate list caches
     await this.cacheService.invalidate('applications:*');
 
-    // 10. Return response (with decrypted+masked doc)
-    return toApplicationResponse(saved, this.encryptionService);
+    return responseDto;
   }
 }

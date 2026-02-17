@@ -39,8 +39,8 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
         totalPages: res.pagination.totalPages,
         isLoading: false,
       });
-    } catch (err: any) {
-      set({ error: err.message || 'Failed to fetch', isLoading: false });
+    } catch (err: unknown) {
+      set({ error: err instanceof Error ? err.message : 'Failed to fetch', isLoading: false });
     }
   },
 

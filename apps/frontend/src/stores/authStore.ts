@@ -35,8 +35,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       localStorage.setItem('refreshToken', res.refreshToken);
       localStorage.setItem('user', JSON.stringify(res.user));
       set({ user: res.user, token: res.token, refreshToken: res.refreshToken, isAuthenticated: true, isLoading: false });
-    } catch (err: any) {
-      set({ error: err.message || 'Login failed', isLoading: false });
+    } catch (err: unknown) {
+      set({ error: err instanceof Error ? err.message : 'Login failed', isLoading: false });
     }
   },
 

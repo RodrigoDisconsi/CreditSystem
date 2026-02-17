@@ -1,6 +1,7 @@
 import type { Job } from 'bullmq';
 import type { IApplicationEventRepository } from '../domain/interfaces/application-event-repository.interface.js';
 import { ApplicationEvent } from '../domain/entities/application-event.entity.js';
+import { logger } from '../shared/logger.js';
 
 export class AuditWorker {
   constructor(
@@ -21,6 +22,6 @@ export class AuditWorker {
     });
 
     await this.eventRepository.create(event);
-    console.log(`Audit event recorded: ${eventType} for application ${applicationId}`);
+    logger.info(`Audit event recorded: ${eventType} for application ${applicationId}`);
   }
 }

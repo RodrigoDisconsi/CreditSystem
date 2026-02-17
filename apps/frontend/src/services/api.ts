@@ -20,7 +20,10 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
 
   const json = await res.json();
-  if (!res.ok) throw json;
+  if (!res.ok) {
+    const message = json?.error?.message || json?.message || 'Request failed';
+    throw new Error(message);
+  }
   return json as T;
 }
 

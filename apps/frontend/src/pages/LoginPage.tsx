@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import Input from '../components/ui/Input';
@@ -10,7 +10,9 @@ export default function LoginPage() {
   const { login, isLoading, error, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  if (isAuthenticated) { navigate('/'); return null; }
+  useEffect(() => {
+    if (isAuthenticated) navigate('/');
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -12,7 +12,6 @@ import { SerasaBankProvider } from './infrastructure/providers/serasa-bank.provi
 import { BuroCreditoBankProvider } from './infrastructure/providers/buro-credito-bank.provider.js';
 
 // Domain
-import { CountryRuleFactory } from './domain/factories/country-rule.factory.js';
 import { BankProviderFactory } from './domain/factories/bank-provider.factory.js';
 
 // Use Cases
@@ -45,7 +44,6 @@ export class Container {
   readonly jwtService: JwtService;
   readonly cacheService: RedisCacheService;
   readonly queueService: BullMQQueueService;
-  readonly countryRuleFactory: CountryRuleFactory;
   readonly bankProviderFactory: BankProviderFactory;
 
   // Repositories
@@ -82,7 +80,6 @@ export class Container {
     this.queueService = new BullMQQueueService(this.redis);
 
     // Domain factories
-    this.countryRuleFactory = new CountryRuleFactory();
     this.bankProviderFactory = new BankProviderFactory();
     this.bankProviderFactory.register('BR', new SerasaBankProvider());
     this.bankProviderFactory.register('MX', new BuroCreditoBankProvider());

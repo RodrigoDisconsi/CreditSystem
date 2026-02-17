@@ -1,6 +1,6 @@
 import { Worker, type Job } from 'bullmq';
 import type { Redis } from 'ioredis';
-import { QUEUE_NAMES } from '../infrastructure/queue/queue-names.js';
+import { logger } from '../shared/logger.js';
 
 interface WorkerProcessor {
   process(job: Job): Promise<void>;
@@ -20,7 +20,7 @@ export class WorkerRegistry {
     const worker = new Worker(
       queueName,
       async (job: Job) => {
-        console.log(`Processing job ${job.id} from queue ${queueName}`);
+        logger.info(`Processing job ${job.id} from queue ${queueName}`);
         await processor.process(job);
       },
       {
@@ -30,20 +30,20 @@ export class WorkerRegistry {
     );
 
     worker.on('completed', (job) => {
-      console.log(`Job ${job.id} completed on queue ${queueName}`);
+      logger.info(`Job ${job.id} completed on queue ${queueName}`);
     });
 
     worker.on('failed', (job, err) => {
-      console.error(`Job ${job?.id} failed on queue ${queueName}:`, err.message);
+      logger.error(`Job ${job?.id} failed on queue ${queueName}: ${err.message}`);
     });
 
     this.workers.push({ name: queueName, worker });
-    console.log(`Worker registered for queue: ${queueName} (concurrency: ${concurrency})`);
+    logger.info(`Worker registered for queue: ${queueName} (concurrency: ${concurrency})`);
   }
 
   async shutdown(): Promise<void> {
-    console.log('Shutting down workers...');
+    logger.info('Shutting down workers...');
     await Promise.all(this.workers.map(({ worker }) => worker.close()));
-    console.log('All workers shut down');
+    logger.info('All workers shut down');
   }
 }

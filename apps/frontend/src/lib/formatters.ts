@@ -15,6 +15,9 @@ export function formatDateTime(dateStr: string): string {
 }
 
 export function maskDocument(doc: string): string {
+  // Backend already sends masked documents (***...XXXX format)
+  // This is a fallback in case unmasked docs are displayed
+  if (doc.startsWith('***')) return doc;
   if (doc.length <= 4) return doc;
-  return '***' + doc.slice(-4);
+  return `***...${doc.slice(-4)}`;
 }

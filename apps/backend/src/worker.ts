@@ -1,5 +1,4 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import { env } from './config/env.js';
 
 import { Redis } from 'ioredis';
 import { PrismaClient } from '@prisma/client';
@@ -15,14 +14,19 @@ import { CountryRuleFactory } from './domain/factories/country-rule.factory.js';
 import { BankProviderFactory } from './domain/factories/bank-provider.factory.js';
 import { SerasaBankProvider } from './infrastructure/providers/serasa-bank.provider.js';
 import { BuroCreditoBankProvider } from './infrastructure/providers/buro-credito-bank.provider.js';
+import { RedisCacheService } from './infrastructure/cache/redis-cache.service.js';
+import { RedisWebSocketEmitter } from './infrastructure/websocket/redis-websocket-emitter.js';
 import { QUEUE_NAMES } from './infrastructure/queue/queue-names.js';
+import { logger } from './shared/logger.js';
 
 async function main() {
-  console.log('Starting workers...');
+  logger.info('Starting workers...');
 
-  const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+  const redis = new Redis(env.REDIS_URL, {
     maxRetriesPerRequest: null,
   });
+  // Separate Redis connection for pub/sub publishing
+  const redisPub = new Redis(env.REDIS_URL);
   const prisma = new PrismaClient();
 
   const encryptionService = new PiiEncryptionService();
@@ -36,19 +40,13 @@ async function main() {
   bankProviderFactory.register('BR', new SerasaBankProvider());
   bankProviderFactory.register('MX', new BuroCreditoBankProvider());
 
-  // Stub WebSocket emitter for worker process (no HTTP server)
-  const workerWsEmitter = {
-    emitToCountry: (countryCode: string, event: string, data: unknown) => {
-      console.log(`[WS-STUB] emitToCountry(${countryCode}, ${event})`, JSON.stringify(data).substring(0, 100));
-    },
-    emitToApplication: (appId: string, event: string, data: unknown) => {
-      console.log(`[WS-STUB] emitToApplication(${appId}, ${event})`, JSON.stringify(data).substring(0, 100));
-    },
-  };
+  // WebSocket emitter via Redis pub/sub (events forwarded to backend's Socket.IO)
+  const workerWsEmitter = new RedisWebSocketEmitter(redisPub);
 
+  const cacheService = new RedisCacheService(redis);
   const riskWorker = new RiskEvaluationWorker(
     applicationRepo, bankProviderFactory, countryRuleFactory,
-    workerWsEmitter, queueService, encryptionService,
+    workerWsEmitter, queueService, encryptionService, cacheService,
   );
   const auditWorker = new AuditWorker(eventRepo);
   const notificationWorker = new NotificationWorker();
@@ -60,20 +58,21 @@ async function main() {
 
   // Graceful shutdown
   const shutdown = async () => {
-    console.log('Received shutdown signal');
+    logger.info('Received shutdown signal');
     await registry.shutdown();
     await prisma.$disconnect();
     redis.disconnect();
+    redisPub.disconnect();
     process.exit(0);
   };
 
   process.on('SIGTERM', shutdown);
   process.on('SIGINT', shutdown);
 
-  console.log('All workers started and listening for jobs');
+  logger.info('All workers started and listening for jobs');
 }
 
 main().catch((err) => {
-  console.error('Worker startup failed:', err);
+  logger.error('Worker startup failed:', err);
   process.exit(1);
 });
